@@ -3,7 +3,7 @@
 Hasta ahora la capa de red provee la funcionalidad de conectar dos host a través de una red. Debido a la dificultad del problema, provee un servicio best effort.
 
 El objetivo final es comunicar procesos que requieren ciertas garantías sobre el canal de comunicación. El nivel de transporte se encargará de proveer la **demultiplexación a nivel proceso** y un conjunto de **garantías** útiles para las aplicaciones.
-   
+
 En Internet se utilizan básicamente dos protocolos de nivel de transporte: **UDP** (sin conexión y no confiable) y **TCP** (con conexión y confiable).
 
 ## UDP
@@ -22,7 +22,7 @@ Alternativas para conocer el puerto destino:
    * Convención de números de puertos (ejemplo: 80 para web)
    * Tener un puerto conocido para negociar otro puerto
    * Port Mapper: servicio escuchando en un único puerto conocido, con protocolo para averiguar el puerto donde reside el servicio buscado
-   
+
 El chequeo de integridad es un checksum sobre:
 
    * Header UDP
@@ -37,10 +37,10 @@ Observar cómo aquí se rompe la capa de abstracción, acoplando UDP a IP. El ch
 
    * Garantiza la transmisión ordenada de un stream de bytes
    * Provee demultiplexación (como UDP)
-   * Orientado a conexión full duplex   
+   * Orientado a conexión full duplex
    * Mecanismo de **flow control** (para que no se transmita más de lo que puede procesar el receptor)
    * Mecanismo de **congestion control** (para que no se sature la red)
-   
+
 ### Características de la comunicación entre procesos
 
 TCP debe lidiar con algunos de los problemas que también se atacaron en la capa física (control de errores, secuenciamiento, control de flujo). Sin embargo, en esta capa se deben tener en cuenta ciertas consideraciones:
@@ -50,7 +50,7 @@ TCP debe lidiar con algunos de los problemas que también se atacaron en la capa
    * **Almacenamiento de la red**: Un paquete puede quedar almacenado en la red y llegar a destino varios segundos más tarde.
    * **Necesidad de flow control**: No se tiene garantías de la cantidad de recursos que dispone el receptor para la conexión, por lo cuál el protocolo se debe encargar de averiguar cuánto se puede enviar en un determinado momento.
    * **Necesidad de congestion control**: No se sabe conoce la capacidad de la red, por lo que el protocolo debe saber cómo prevenir que la red se inunde de mensajes que no llega a transmitir.
-   
+
 ### Formato de segmento
 
 Observaciones:
@@ -58,7 +58,7 @@ Observaciones:
    * TCP ofrece una interfaz de byte stream, pero lo que efectivamente se envían son segmentos.
    * El host emisor guarda en un buffer una cantidad suficiente de bytes que luego son enviados juntos.
    * El receptor, a su vez, guarda en buffers los segmentos recibidos que se van vaciando a medida que el proceso lee.
-   
+
 <img src="http://i.imgur.com/bV2AyKW.png" style="width: 250px">
 
    * SrcPort, DstPort: demultiplexación
@@ -67,7 +67,7 @@ Observaciones:
    * Flags: información de control
    * UrgPtr: indica dónde empiezan los datos no urgentes (si está habilitado el flag URG)
    * Checksum: control de integridad
-   
+
 ### Conexión
 
 El setup de la conexión se inicia cuando el caller hace un **active open** a un callee que haya hecho un **pasive open** (osea, que esté escuchando en ese puerto). Una vez establecida la conexión, puede ocurrir que sólo un extremo la cierre y que el otro siga mandando datos.
@@ -105,7 +105,7 @@ Sliding window también se utiliza para evitar que el sender envíe más datos d
 
    * Si la aplicación no consume, se debe seguir guardando en buffer.
    * Si llega un segmento pero no están todos los anteriores, no se envia ACK y se guarda en buffer.
-   
+
 Esto hace que el temaño de la ventana (es decir, la cantidad de bytes que puede haber enviados sin haber recibido ACK) no sea fijo sino que dependa del estado del buffer, el orden de los datos que llegan y el ritmo al cual la aplicación consume.
 
 Lo que se hace es que, con cada ACK, el receiver comunica al sender el tamaño de ventana actual. En caso de publicarse una ventana de tamaño 0, el sender envía períodicamente segmentos de 1 byte esperando que alguno sea aceptado.
@@ -114,15 +114,15 @@ Lo que se hace es que, con cada ACK, el receiver comunica al sender el tamaño d
 
 El tamaño del buffer del receptor limita la cantidad de bytes no leídos almacenados:
 
-$$LastByteRcvd − LastByteRead \leq MaxRcvBuffer$$
+$$LastByteRcvd - LastByteRead \leq MaxRcvBuffer$$
 
 No puede haber más bytes sin ACK de lo que indica la ventana publicada:
 
-$$LastByteSent − LastByteAcked \leq AdvertisedWindow$$
+$$LastByteSent - LastByteAcked \leq AdvertisedWindow$$
 
 La aplicación que envía no puede escribir más de lo que soporta su buffer (en caso de querer escribir más, se bloquea):
 
-$$LastByteWritten − LastByteAcked \leq MaxSendBuffer$$
+$$LastByteWritten - LastByteAcked \leq MaxSendBuffer$$
 
 #### Posibles problemas
 
@@ -150,9 +150,9 @@ El algoritmo original para calcular el timeout funcionaba así:
    * Al enviar el ACK, el receptor copia el mismo timestamp
    * Al llegar el ACK del mismo, se calculaba un SampleRTT con el timestamp de emisión y un nuevo timestamp.
    * Se calcula el nuevo EstimatedRTT como un promedio ponderado con el estimado anterior:
-   $$EstimatedRTT = \alpha \times EstimatedRTT + (1 − \alpha) \times SampleRTT$$
+   $$EstimatedRTT = \alpha \times EstimatedRTT + (1 - \alpha) \times SampleRTT$$
    $$Timeout = 2 \times EstimatedRTT$$
-   
+
 #### Algoritmo de Karn/Patridge
 
 Dado un ACK, es imposible saber a qué transmisión de ese dato corresponde. Esto puede hacer que tomemos SampleRTT no representativos. Para solucionar esto, el algoritmo de Karn/Patridge propone tomar samples sólamente de paquetes que no requirieron retransmisión.
@@ -165,13 +165,13 @@ El algoritmo anterior no soluciona por completo el problema de congestión. Entr
 
 Este algoritmo tiene en cuenta la variación de RTT.
 
-$$Difference = SampleRTT − EstimatedRTT$$
+$$Difference = SampleRTT - EstimatedRTT$$
 $$EstimatedRTT = EstimatedRTT + (\delta \times Difference)$$
-$$Deviation = Deviation + \delta(|Difference| − Deviation)$$
+$$Deviation = Deviation + \delta(|Difference| - Deviation)$$
 $$TimeOut = \mu × EstimatedRTT + \phi × Deviation$$
 
-Con valores cercanos a $$$\mu = 1$$$, $$$\phi = 4$$$. Con varianza pequeña, el timeout es cercano al EstimatedRTT. Varianzas mayores hacen que el término de desvío domine el timeout. 
-   
+Con valores cercanos a $\mu = 1$, $\phi = 4$. Con varianza pequeña, el timeout es cercano al EstimatedRTT. Varianzas mayores hacen que el término de desvío domine el timeout.
+
 ### Delimitación de segmentos
 
 Queda el problema de decidir en qué momento dejar de bufferear y enviar un segmento., Asumiendo una ventana arbitrariamente grande, tres eventos pueden hacer que esto ocurra:
@@ -179,7 +179,7 @@ Queda el problema de decidir en qué momento dejar de bufferear y enviar un segm
    * Se alcanza el **MSS** (Maximum Segment Size, ~ MTU inmediato).
    * Push por parte de la aplicación.
    * Timer (ver adelante)
-   
+
 #### Silly window sindrome
 
 El **silly window sindrome** es un problema que ocurre cuando la capacidad de recepción es muy pequeña y el sender es muy agresivo. Es decir, intenta enviar constantemente apenas se abre una pequeña ventana de transmisión.
@@ -230,7 +230,7 @@ Los métodos para lidiar con congestión se pueden clasificar de la siguiente fo
 ### Flujos
 
 En redes con conexión se puede optar reservar recursos en la etapa de setup. Esto lleva a subutilización de la infraestructura.
- 
+
 Tal como ocurre en IP, se considera que a nivel de red no se tienen conexiones. Sin embargo, si bien los datagramas pueden ser ruteados por canales distintos, en la práctica ocurre que muchas veces hay **flujos** de paquetes que atraviesan el mismo conjunto de routers. Distinguir estos flujos permite mantener cierto **soft state** para tomar decisiones en los mecanismos de control.
 
 ### Encolamiento
@@ -250,13 +250,13 @@ Características generales:
    * Se realiza desde los hosts, enviando paquetes sin reserva y reaccionando al comportamiento de la red.
    * No se asume nada especial sobre la política de encolamiento de routers.
    * Esencialmente, un host evalúa cuántos paquetes puede enviar, e interpreta cada ACK como un permiso para enviar otro en reemplazo del que acaba de salir de la red.
-   
+
 Hay tres mecanismos básicos que definen el control de congestión de TCP:
 
    * Additive Increase / Multiplicative Decrease
    * Slow Start
    * Fast Retransmit - Fast Recovery
-   
+
 #### Additive Increase / Multiplicative Decrease
 
 <img src="http://i.imgur.com/2XO6ZwQ.png" style="width: 300px">
@@ -267,7 +267,7 @@ Hay tres mecanismos básicos que definen el control de congestión de TCP:
    * Cada vez que ocure un timeout, se baja CongestionWindow a la mitad (con un mínimo en el MSS).
    * Cada vez que llega un ACK, la ventana se incrementa por una fración del MSS.
    * La idea es que tener una CongestionWindow demasiado grande cuando hay congestión produce más congestión, por lo cual es necesario salir rápido de esa situación.
-   
+
 #### Slow Start
 
 El comportamiento de AIMD sirve cuando se está operando cerca de los límites permitidos por la red, pero es muy conservador arrancar todas las conexiones transmitiendo con ventana mínima y subiendo linealmente. **Slow Start** hace este incremento exponencial.
@@ -284,16 +284,16 @@ Además de en el inicio de la conexión, el mecanismo se utiliza cuando se comie
    * En vez de hacer esto realiza slow start, comenzando del mínimo y aumentando hacia el último valor conocido de CongestionWindow (y luego siguiendo con additive increase).
    * Para implementar esto, se introduce una nueva variable **CongestionThreshold**, que se setea igual a CongestionWindow tras cada multiplicative decrease.
    * Slow start no se utiliza con timeouts ocurridos por fast retransmit (ver siguiente)
-   
+
 #### Fast Retransmit - Fast Recovery
 
    * El mecanismo tradicional de timeouts de TCP (self-clocked por RTT) daba lugar a varios períodos de inactividad en los cuales no ocurría nada hasta que se disparara un timeout.
    * **Fast retransmit** es un mecanismo adicional que puede disparar retransmisión antes que el timeout ocurra.
    * Se implementa haciendo que el receptor envíe un ACK por cada paquete que llega (aunque sea fuera de orden y tenga que mandar un ACK duplicado de un paquete anterior).
    * Cuando el emisor detecta cierta cantidad de ACK duplicados, retransmite el segmento con número siguiente al ACK (sin necesidad de esperar el timeout).
-   
+
 	<img src="http://i.imgur.com/R1DOFlz.png" style="width: 150px">
-	
+
 Observar que cuando se dispara un timeout por fast retransmit todavía pueden quedar ACKs en camino. **Fast recovery** utiliza estos ACK para proceder con la dinámica común de AIMD, evitando la fase de slow start. En definitiva, slow start sólo se utilizará al principio de la conexión y cuando ocurra un timeout regular.
 
 
@@ -309,7 +309,7 @@ No incluye, sin embargo, mecanismos para sensar la capacidad de la red y control
    * Cada router monitorea su estado y notifica a los hosts cuando está congestionado.
    * La notificacións se implementa seteando un bit en todos los paquetes que pasan por el router. El router destino copia el valor del bit en los ACK que envía.
    * Los hosts deciden, en función del porcentaje de paquetes que activaron el bit, cuándo achicar su ventana de congestión con un mecanismo similar a AIMD.
-   
+
 #### RED (Random Early Detection)
 
    * Los routers también monitorean su estado y notifican a los hosts.
@@ -333,4 +333,3 @@ Detalles:
    * FRED mantiene estadísticas similares a las de RED pero por flujo. Por ende, mantiene estado y requiere más cómputo por parte de los routers.
    * El objetivo es ser más agresivo con los flujos que ocupan más lugar de buffer, manteniendo distintas probabilidades.
    * Por ejemplo, permite que se dropeen todos los paquetes de un flujo "bandido" (habiendo superado el threshold) pero sin afectar a otros flujos.
-   
