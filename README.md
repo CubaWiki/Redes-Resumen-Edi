@@ -1,5 +1,5 @@
 # Redes-Resumen-Edi
-Resumen de Teoría de Lenguajes (AKA Redes)
+Resumen de Teoría de las Comunicaciones (AKA Redes)
 
 ## Para compilar
 * En linux, tener instalado **pandoc**. Se puede instalar corriendo: ```sudo apt-get install pandoc```.
